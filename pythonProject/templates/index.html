@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm Assistant</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+    <script src="https://code.responsivevoice.org/responsivevoice.js?key=gRP3bisR"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+        }
+
+        #container {
+            width: 80%;
+            margin: 0 auto;
+            padding-top: 50px;
+        }
+
+        #chatbox {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .botText, .userText {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+
+        .botText span, .userText span {
+            padding: 10px 15px;
+            border-radius: 5px;
+            display: inline-block;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .botText span {
+            background-color: #e5f9e0;
+        }
+
+        .userText span {
+            background-color: #a9d9f0;
+            float: right;
+        }
+
+        .botText {
+            text-align: left;
+        }
+
+        .userText {
+            text-align: right;
+        }
+
+        #userInput {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        #textInput {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px 15px;
+            width: 70%;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        #buttonInput, #voiceButton, #uploadImageButton, #deleteButton, #weatherButton {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #buttonInput {
+            background-color: green;
+            color: white;
+        }
+
+        #buttonInput:hover {
+            background-color: #00cc00;
+        }
+
+        #voiceButton {
+            background-color: #007bff;
+            color: white;
+        }
+
+        #voiceButton:hover {
+            background-color: #0056b3;
+        }
+
+        #uploadImageButton {
+            background-color: #ffa500;
+            color: white;
+        }
+
+        #uploadImageButton:hover {
+            background-color: #cc8400;
+        }
+
+        #deleteButton {
+            background-color: #ff5757;
+            color: white;
+        }
+
+        #deleteButton:hover {
+            background-color: #b32424;
+        }
+
+        #weatherButton {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #weatherButton:hover {
+            background-color: #367b3c;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>FARM ASSISTANT</h1>
+    <div id="container">
+        <div id="chatbox">
+            <div id="mainChat">
+                <p class='botText'><span>Hi there!</span></p>
+            </div>
+            <div id="followUpChat" style="display: none;">
+                <p class='botText'>Follow-up questions:</p>
+            </div>
+        </div>
+        <div id="userInput">
+            <input id="textInput" type="text" name="userMessage" placeholder="Type your message...">
+            <input id="buttonInput" type="submit" value="Send"/>
+            <button id="voiceButton">Voice Input</button>
+
+            <!-- Image upload section -->
+            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+            <button id="uploadImageButton">Upload Image</button>
+
+            <!-- Delete button -->
+            <button id="deleteButton">Delete Last</button>
+
+            <!-- Weather button -->
+            <button id="weatherButton">Get Weather</button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            // Add click event handler for the Send button
+            $('#buttonInput').click(function () {
+                sendMessage();
+            });
+
+            // Add click event handler for the Voice Input button
+            $('#voiceButton').click(function () {
+                responsiveVoice.speak("Speak now.", "US English Female", {
+                    onend: function () {
+                        var recognition = new webkitSpeechRecognition();
+                        recognition.lang = 'en-US';
+                        recognition.start();
+
+                        recognition.onresult = function(event) {
+                            var userVoiceInput = event.results[0][0].transcript;
+                            responsiveVoice.speak("Thank you. Processing your message.", "US English Female", {
+                                onend: function () {
+                                    processInput(userVoiceInput);
+                                }
+                            });
+                        };
+                    }
+                });
+            });
+
+            // Add change event handler for the Image upload button
+            $('#imageInput').change(function () {
+                var formData = new FormData();
+                formData.append('image', $(this)[0].files[0]);
+                uploadImage(formData);
+            });
+
+            // Add click event handler for the Delete button
+            $('#deleteButton').click(function () {
+                $('#mainChat').children().last().remove(); // Remove last message
+            });
+
+            // Add click event handler for the Upload Image button
+            $('#uploadImageButton').click(function () {
+                $('#imageInput').click(); // Trigger file input click
+            });
+
+            // Add click event handler for the Weather button
+            $('#weatherButton').click(function () {
+                getWeather();
+            });
+        });
+
+        function sendMessage() {
+            var userText = $('#textInput').val();
+            var userHTML = "<p class='userText'>User:<span>" + userText + "</span></p>";
+            $('#textInput').val("");
+            $('#mainChat').append(userHTML);
+            document.getElementById("userInput").scrollIntoView({ block: 'start', behavior: 'smooth' });
+
+            $.ajax({
+                url: "/get",
+                type: "GET",
+                data: { userMessage: userText },
+                success: function (data) {
+                    var botHTML = "<p class='botText'>Chatbot:<span>" + data.response + "</span></p>";
+                    $('#mainChat').append(botHTML);
+                    if (data.follow_up) {
+                        $('#followUpChat').show();
+                        var followUpHTML = "<p class='botText'><span>" + data.follow_up + "</span></p>";
+                        $('#followUpChat').html(followUpHTML); // Use html() to replace content
+                    } else {
+                        $('#followUpChat').hide(); // Hide follow-up chat if not provided
+                    }
+                },
+                error: function (error) {
+                    console.error('Error getting response:', error);
+                }
+            });
+        }
+
+        function processInput(userInput) {
+            var userText = userInput;
+            var userHTML = "<p class='userText'>User:<span>" + userText + "</span></p>";
+            $('#mainChat').append(userHTML);
+            document.getElementById("userInput").scrollIntoView({ block: 'start', behavior: 'smooth' });
+
+            // Input the spoken message into the text input field
+            $('#textInput').val(userText);
+
+            // Simulate click on the send button
+            $('#buttonInput').click();
+        }
+
+        function uploadImage(formData) {
+            $.ajax({
+                url: '/upload_image',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    var botHTML = "<p class='botText'>Chatbot:<span>" + data.response + "</span></p>";
+                    $('#mainChat').append(botHTML);
+                    if (data.follow_up) {
+                        $('#followUpChat').show();
+                        var followUpHTML = "<p class='botText'><span>" + data.follow_up + "</span></p>";
+                        $('#followUpChat').html(followUpHTML); // Use html() to replace content
+                    } else {
+                        $('#followUpChat').hide(); // Hide follow-up chat if not provided
+                    }
+                },
+                error: function (error) {
+                    console.error('Error uploading image:', error);
+                }
+            });
+        }
+
+        function getWeather() {
+            var userText = $('#textInput').val();
+            var city = userText.trim();
+            if (city !== "") {
+                $.ajax({
+                    url: "/weather",
+                    type: "GET",
+                    data: { city: city },
+                    success: function (data) {
+                        var markdown_response = data.markdown_response;
+                        var weatherHTML = "<p class='botText'>Weather:<span>" + markdown_response + "</span></p>";
+                        $('#mainChat').append(weatherHTML);
+                    },
+                    error: function (error) {
+                        console.error('Error getting weather data:', error);
+                    }
+                });
+            } else {
+                alert("Please enter a city name.");
+            }
+        }
+    </script>
+</body>
+</html>
